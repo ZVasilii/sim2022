@@ -12,6 +12,7 @@ using RegId = std::size_t;
 
 constexpr RegId kRegNum = 32;
 constexpr std::uint8_t kBitsInByte = 8;
+constexpr Word kDummyWord = 0;
 
 /**
  * @brief Calculate size of a type in bits function
