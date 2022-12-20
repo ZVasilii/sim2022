@@ -17,6 +17,8 @@ static_assert(
 namespace sim {
 
 using Word = std::uint32_t;
+using Half = std::uint16_t;
+using Byte = std::uint8_t;
 using RegVal = Word;
 using Addr = std::uint32_t;
 using RegId = std::uint8_t;
@@ -27,6 +29,10 @@ constexpr CSRegId kCSRegNum = 4096;
 constexpr std::uint8_t kBitsInByte = 8;
 constexpr Word kDummyWord = 0;
 constexpr std::uint8_t kXLENInBytes = sizeof(Word);
+constexpr std::uint16_t kPageSize = 4096;
+constexpr std::uint16_t kTLBSize = 1024;
+constexpr std::uint16_t kTLBBits = 10;
+constexpr std::uint16_t kOffsetBits = 12;
 
 constexpr std::string_view kCosimLoggerName = "cosim";
 
