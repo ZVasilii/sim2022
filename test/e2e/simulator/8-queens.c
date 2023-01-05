@@ -1,31 +1,5 @@
-// RUN: %gcc %s -o queens
-
-/*
- *    8-queens.c
- *      Solve the eight queens problem using backtracking
- *
- *        begun: March 1, 2002
- *          by: Steven Skiena
- *          */
-
-/*
- * Copyright 2003 by Steven S. Skiena; all rights reserved.
- *
- * Permission is granted for use in non-commerical applications
- * provided this copyright notice remains intact and unchanged.
- *
- * This program appears in my book:
- *
- * "Programming Challenges: The Programming Contest Training Manual"
- * by Steven Skiena and Miguel Revilla, Springer-Verlag, New York 2003.
- *
- * See our website www.programming-challenges.com for additional information.
- *
- * This book can be ordered from Amazon.com at
- *
- * http://www.amazon.com/exec/obidos/ASIN/0387001638/thealgorithmrepo/
- *
- * */
+// RUN: %gcc %s -o %t
+// RUN: %simulator --cosim %t | %fc %s
 
 typedef int bool;
 
@@ -34,14 +8,16 @@ typedef int bool;
 #define MAXCANDIDATES 100 /* max possible next extensions */
 #define NMAX 100          /* maximum solution size */
 
-typedef char *data; /* type to pass data to backtrack */
+typedef int data; /* type to pass data to backtrack */
 
 int solution_count; /* how many solutions are there? */
 
 bool finished = FALSE; /* found all solutions yet? */
 
-int is_a_solution(int a[], int k, int n);
-void process_solution(int a[], int k);
+bool is_a_solution(int[], int k, int n) { return (k == n); }
+
+void process_solution(int[], int) { solution_count++; }
+
 void construct_candidates(int a[], int k, int n, int c[], int *ncandidates);
 
 void backtrack(int a[], int k, data input) {
@@ -50,7 +26,7 @@ void backtrack(int a[], int k, data input) {
   int i;                /* counter */
 
   if (is_a_solution(a, k, input))
-    process_solution(a, k, input);
+    process_solution(a, k);
   else {
     k = k + 1;
     construct_candidates(a, k, input, c, &ncandidates);
@@ -62,14 +38,6 @@ void backtrack(int a[], int k, data input) {
     }
   }
 }
-
-void process_solution(int a[], int k) {
-  int i; /* counter */
-
-  solution_count++;
-}
-
-int is_a_solution(int a[], int k, int n) { return (k == n); }
 
 /*  What are possible elements of the next slot in the 8-queens
  *    problem?
@@ -98,16 +66,44 @@ void construct_candidates(int a[], int k, int n, int c[], int *ncandidates) {
 }
 
 int main() {
-  int a[NMAX]; /* solution vector */
-  int i;       /* counter */
-  int compare[] = {1, 0, 0, 2, 10, 4, 40, 92};
+  int a[NMAX];
 
-  for (i = 1; i <= 8; i++) {
-    solution_count = 0;
-    backtrack(a, 0, i);
-    // printf("n=%d  solution_count=%d\n",i,solution_count);
-    if (compare[i - 1] != solution_count)
-      asm("ecall");
-  }
+  solution_count = 0;
+  backtrack(a, 0, 8);
+
+  // CHECK: NUM=2952531
+  // CHECK: M[0x110003b0]=0x0000005d
+  // CHECK: PC=0x00010394
+  solution_count += 1;
+
+  // CHECK: NUM=2952532
+  // CHECK: PC=0x00010398
   asm("ecall");
 }
+
+/*
+ *    8-queens.c
+ *      Solve the eight queens problem using backtracking
+ *
+ *        begun: March 1, 2002
+ *          by: Steven Skiena
+ *          */
+
+/*
+ * Copyright 2003 by Steven S. Skiena; all rights reserved.
+ *
+ * Permission is granted for use in non-commerical applications
+ * provided this copyright notice remains intact and unchanged.
+ *
+ * This program appears in my book:
+ *
+ * "Programming Challenges: The Programming Contest Training Manual"
+ * by Steven Skiena and Miguel Revilla, Springer-Verlag, New York 2003.
+ *
+ * See our website www.programming-challenges.com for additional information.
+ *
+ * This book can be ordered from Amazon.com at
+ *
+ * http://www.amazon.com/exec/obidos/ASIN/0387001638/thealgorithmrepo/
+ *
+ * */
