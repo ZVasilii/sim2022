@@ -14,9 +14,15 @@ Hart::Hart(const fs::path &executable) {
 
   for (auto segmentIdx : loader.getLoadableSegments()) {
     auto text = loader.getSegment(segmentIdx);
-    getMem().storeRange(loader.getSegmentAddr(segmentIdx), text.begin(),
-                        text.end());
+    auto addr = loader.getSegmentAddr(segmentIdx);
+    getMem().storeRange(addr, text.begin(), text.end());
+
+    auto fileSize = static_cast<Addr>(loader.getSegmentFileSize(segmentIdx));
+    auto memSize = static_cast<Addr>(loader.getSegmentMemorySize(segmentIdx));
+    for (; fileSize < memSize; fileSize += kXLENInBytes)
+      getMem().storeWord(addr + fileSize, Word{});
   }
+
   getMem().setProgramStoredFlag();
 }
 
