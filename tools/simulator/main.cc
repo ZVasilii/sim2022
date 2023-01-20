@@ -13,6 +13,7 @@
 #include <spdlog/spdlog.h>
 
 #include "common/common.hh"
+#include "common/timer.hh"
 #include "hart/hart.hh"
 
 namespace fs = std::filesystem;
@@ -81,19 +82,17 @@ int main(int argc, char **argv) try {
     initCosimLogger(cosimFile, !*cosimFileOpt);
   }
   sim::Hart hart{input, bbCacheSize};
-
-  auto start = std::chrono::steady_clock::now();
+  timer::Timer timer;
   hart.run();
-  auto end = std::chrono::steady_clock::now();
-  std::chrono::duration<double> elapsedSeconds = end - start;
+  auto time = timer.elapsedMcs();
 
   if (printPerf) {
     auto ic = hart.getInstrCount();
-    auto tm = elapsedSeconds.count();
     std::cout << "Instruction number: " << ic << std::endl;
-    std::cout << "Elapsed time: " << tm << "s" << std::endl;
-    std::cout << "Perf: " << (static_cast<double>(ic) / tm / 1e6) << "MIPS"
-              << std::endl;
+    std::cout << "Elapsed time: " << time << "s" << std::endl;
+    std::cout << "Perf: "
+              << (static_cast<double>(ic) / static_cast<double>(time))
+              << " MIPS" << std::endl;
   }
 
   return 0;
