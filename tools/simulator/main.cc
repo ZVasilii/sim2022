@@ -1,4 +1,6 @@
+#include <chrono>
 #include <filesystem>
+#include <iostream>
 #include <map>
 #include <stdexcept>
 
@@ -60,6 +62,10 @@ int main(int argc, char **argv) try {
         return "";
       });
 
+  bool printPerf{false};
+  app.add_flag("--print-perf", printPerf,
+               "Print information about performance");
+
   std::int64_t bbCacheSize{};
   app.add_option("--bbc-size", bbCacheSize, "Set size of basic block cache")
       ->default_val(-1);
@@ -75,7 +81,20 @@ int main(int argc, char **argv) try {
     initCosimLogger(cosimFile, !*cosimFileOpt);
   }
   sim::Hart hart{input, bbCacheSize};
+
+  auto start = std::chrono::steady_clock::now();
   hart.run();
+  auto end = std::chrono::steady_clock::now();
+  std::chrono::duration<double> elapsedSeconds = end - start;
+
+  if (printPerf) {
+    auto ic = hart.getInstrCount();
+    auto tm = elapsedSeconds.count();
+    std::cout << "Instruction number: " << ic << std::endl;
+    std::cout << "Elapsed time: " << tm << "s" << std::endl;
+    std::cout << "Perf: " << (static_cast<double>(ic) / tm / 1e6) << "MIPS"
+              << std::endl;
+  }
 
   return 0;
 } catch (const std::exception &e) {
