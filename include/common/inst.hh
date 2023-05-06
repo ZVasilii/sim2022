@@ -12,6 +12,7 @@
 namespace sim {
 
 struct Instruction final {
+
   RegId rs1{};
   RegId rs2{};
   RegId rs3{};
@@ -25,9 +26,10 @@ struct Instruction final {
 
   bool isBranch{false};
 
-  std::string str() const;
+  [[nodiscard]] std::string str() const;
 
-  std::function<void(const Instruction &, State &)> callback = nullptr;
+  using Callback = void (*)(const Instruction &, State &);
+  Callback callback = nullptr;
 };
 
 using BasicBlock = std::vector<Instruction>;

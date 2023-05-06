@@ -42,9 +42,9 @@ class LRUCache final : public IBBCache {
   std::unordered_map<Addr, ListIt> hash_{};
 
 public:
-  LRUCache(std::size_t size) : size_(size) {}
+  explicit LRUCache(std::size_t size) : size_(size) {}
 
-  bool isFull() const { return (cache_.size() == size_); }
+  [[nodiscard]] bool isFull() const { return (cache_.size() == size_); }
 
   const BasicBlock &
   lookupUpdate(Addr key, std::function<BasicBlock(Addr)> slowGetData) override {
@@ -114,11 +114,17 @@ BasicBlock Hart::createBB(Addr addr) {
 }
 
 void Hart::run() {
+  auto lCreateBB = [this](Addr addr) { return createBB(addr); };
+
   while (!state_.complete) {
-    auto lCreateBB = [this](Addr addr) { return createBB(addr); };
     const auto &bb = bbc_->lookupUpdate(getPC(), lCreateBB);
     exec_.execute(bb.begin(), bb.end(), state_);
   }
+  auto stats = state_.mem.getTLBStats();
+  std::cout << "Hits: "
+            << static_cast<double>(stats.TLBHits) /
+                   static_cast<double>(stats.TLBRequests) * 100.0
+            << std::endl;
 }
 
 } // namespace sim

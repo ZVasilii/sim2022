@@ -44,10 +44,6 @@ if(BUILD_TESTS)
   enable_testing()
 endif()
 
-if(ENABLE_LOG)
-  add_compile_options(-DSPDLOG)
-endif()
-
 find_package(spdlog REQUIRED)
 message("Found package: spdlog")
 
@@ -78,8 +74,17 @@ foreach(TARGET ${TARGETS})
   if(ENABLE_WERROR)
     target_compile_options(${TARGET} PRIVATE -Werror)
   endif()
+
+  if(ENABLE_LOG)
+    target_compile_definitions(${TARGET} PUBLIC -DSPDLOG=1)
+  endif()
 endforeach()
 
 foreach(TOOL ${TOOLLIST})
   target_link_libraries(${TOOL} PRIVATE ${LIBLIST})
+  if(ENABLE_LOG)
+    target_compile_definitions(${TOOL} PRIVATE SPDLOG=1)
+  endif()
 endforeach()
+
+add_compile_options(-g3 -O3)

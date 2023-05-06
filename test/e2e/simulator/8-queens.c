@@ -14,9 +14,9 @@ int solution_count; /* how many solutions are there? */
 
 bool finished = FALSE; /* found all solutions yet? */
 
-bool is_a_solution(int[], int k, int n) { return (k == n); }
+bool is_a_solution(int arr[], int k, int n) { return (k == n); }
 
-void process_solution(int[], int) { solution_count++; }
+void process_solution(int arr[], int b) { solution_count++; }
 
 void construct_candidates(int a[], int k, int n, int c[], int *ncandidates);
 
@@ -68,16 +68,18 @@ void construct_candidates(int a[], int k, int n, int c[], int *ncandidates) {
 int main() {
   int a[NMAX];
 
-  solution_count = 0;
-  backtrack(a, 0, 8);
+  for (int i = 1; i <= 8; i++) {
+    solution_count = 0;
+    backtrack(a, 0, i);
+  }
 
-  // CHECK: NUM=2952531
-  // CHECK: M[0x110003b0]=0x0000005d
-  // CHECK: PC=0x00010394
+  // CHECK: NUM=3709836
+  // CHECK: M[0x110003d4]=0x0000005d
+  // CHECK: PC=0x000103b8
   solution_count += 1;
 
-  // CHECK: NUM=2952532
-  // CHECK: PC=0x00010398
+  // CHECK: NUM=3709837
+  // CHECK: PC=0x000103bc
   asm("ecall");
 }
 
