@@ -10,15 +10,18 @@ using AddrSections = sim::PhysMemory::AddrSections;
 using Page = sim::Page;
 using PagePtr = sim::PagePtr;
 using MemOp = sim::PhysMemory::MemoryOp;
+using Word = sim::Word;
+using Byte = sim::Byte;
+using Half = sim::Half;
 
 TEST(Memory, Memory_store_load) {
   sim::Memory mem;
 
   // Load value which was stored  previously
   for (Addr i = 0; i < kNumReqs; ++i)
-    mem.storeWord(i * 4, i * i);
+    mem.storeEntity<Word>(i * 4, i * i);
   for (Addr i = 0; i < kNumReqs; ++i)
-    EXPECT_EQ(mem.loadWord(i * 4), i * i);
+    EXPECT_EQ(mem.loadEntity<Word>(i * 4), i * i);
 }
 
 TEST(Memory, Mem_stats) {
@@ -28,11 +31,11 @@ TEST(Memory, Mem_stats) {
   // kNumReqs stores
   // 2 * kNumReqs loads (kNumReqs pageFaults + kNumReqs real loads)
   for (Addr i = 0; i < kNumReqs; ++i)
-    mem.storeWord(i * 4, i * i);
+    mem.storeEntity<Word>(i * 4, i * i);
   for (Addr i = 0; i < kNumReqs; ++i)
-    mem.loadWord(i * 4);
+    mem.loadEntity<Word>(i * 4);
   for (Addr i = kNumReqs; i < 2 * kNumReqs; ++i)
-    mem.loadWord(i * 4);
+    mem.loadEntity<Word>(i * 4);
 
   stats = mem.getMemStats();
   EXPECT_EQ(stats.numStores, kNumReqs);
@@ -78,14 +81,14 @@ TEST(PhysMemory, pageTableLookup) {
 
 TEST(PhysMemory, MixingWordHalf) {
   sim::Memory mem;
-  mem.storeWord(0x10000000, 0xAABBCCDD);
-  EXPECT_EQ(mem.loadWord(0x10000000), 0xAABBCCDD);
-  EXPECT_EQ(mem.loadHalf(0x10000000), 0xCCDD);
-  EXPECT_EQ(mem.loadHalf(0x10000002), 0xAABB);
-  EXPECT_EQ(mem.loadByte(0x10000000), 0xDD);
-  EXPECT_EQ(mem.loadByte(0x10000001), 0xCC);
-  EXPECT_EQ(mem.loadByte(0x10000002), 0xBB);
-  EXPECT_EQ(mem.loadByte(0x10000003), 0xAA);
+  mem.storeEntity<Word>(0x10000000, 0xAABBCCDD);
+  EXPECT_EQ(mem.loadEntity<Word>(0x10000000), 0xAABBCCDD);
+  EXPECT_EQ(mem.loadEntity<Half>(0x10000000), 0xCCDD);
+  EXPECT_EQ(mem.loadEntity<Half>(0x10000002), 0xAABB);
+  EXPECT_EQ(mem.loadEntity<Byte>(0x10000000), 0xDD);
+  EXPECT_EQ(mem.loadEntity<Byte>(0x10000001), 0xCC);
+  EXPECT_EQ(mem.loadEntity<Byte>(0x10000002), 0xBB);
+  EXPECT_EQ(mem.loadEntity<Byte>(0x10000003), 0xAA);
 }
 
 TEST(PhysMemory, getOffset) {
@@ -99,21 +102,21 @@ TEST(PhysMemory, getEntity) {
   sim::Memory mem;
 #ifdef MISALIGNED_CHECK
   // Misaligned Address (Not alogned to word_size)
-  EXPECT_THROW(mem.storeWord(0xDEADBE01, 0x0),
+  EXPECT_THROW(mem.storeEntity<Word>(0xDEADBE01, 0x0),
                sim::PhysMemory::MisAlignedAddrException);
   // Misaligned Address (Between the pages)
-  EXPECT_THROW(mem.storeWord(0xDEADFFFE, 0x0),
+  EXPECT_THROW(mem.storeEntity<Word>(0xDEADFFFE, 0x0),
                sim::PhysMemory::MisAlignedAddrException);
 #endif
   // Load on unmapped region
-  EXPECT_THROW(mem.loadWord(0x0), sim::PhysMemory::PageFaultException);
+  EXPECT_THROW(mem.loadEntity<Word>(0x0), sim::PhysMemory::PageFaultException);
 
-  mem.storeWord(0x10000000, 42);
-  EXPECT_EQ(mem.loadWord(0x10000000), 42);
+  mem.storeEntity<Word>(0x10000000, 42);
+  EXPECT_EQ(mem.loadEntity<Word>(0x10000000), 42);
 
   // Rewriting word
-  mem.storeWord(0x10000000, 21);
-  EXPECT_EQ(mem.loadWord(0x10000000), 21);
+  mem.storeEntity<Word>(0x10000000, 21);
+  EXPECT_EQ(mem.loadEntity<Word>(0x10000000), 21);
 }
 
 TEST(TLB, getTLBIndex) {
@@ -128,26 +131,31 @@ TEST(TLB, tlbLookup) {
   Page page_1{};
   tlb.tlbUpdate(0xDEADBEEF, &page_1);
 
-  // Deadbeef is in TLB, BeafDead - not;
-  EXPECT_EQ(tlb.tlbLookup(0xBEEFDEAD), nullptr);
-  EXPECT_EQ(tlb.tlbLookup(0xDEADBEEF), &page_1);
+  // Deadb*** is in TLB, Other patterns - not;
+  EXPECT_EQ(tlb.tlbLookup(0xBEEFDEAD), nullptr); // miss
+  EXPECT_EQ(tlb.tlbLookup(0xDEADBEEF), &page_1); // hit
+  EXPECT_EQ(tlb.tlbLookup(0xDEADBEE0), &page_1); // hit
+  EXPECT_EQ(tlb.tlbLookup(0xDEADBE00), &page_1); // hit
+  EXPECT_EQ(tlb.tlbLookup(0xDEADB000), &page_1); // hit
+  EXPECT_EQ(tlb.tlbLookup(0xDEAD0000), nullptr); // miss
 
   // Change value in the TLB
   Page page_2{};
   tlb.tlbUpdate(0xDEADBEEF, &page_2);
-  EXPECT_EQ(tlb.tlbLookup(0xDEADBEEF), &page_2);
-  EXPECT_NE(tlb.tlbLookup(0xDEADBEEF), &page_1);
+  EXPECT_EQ(tlb.tlbLookup(0xDEADBEEF), &page_2); // hit
+  EXPECT_NE(tlb.tlbLookup(0xDEADBEEF), &page_1); // hit
 
-  // FAADBDEA has the same TLBIndex with DEADBEEF
+  // FAADBDEA has the same TLBIndex with DEADBEEF ->
   Page page_3{};
+  EXPECT_EQ(tlb.getTLBIndex(0xFAADBDEA), tlb.getTLBIndex(0xDEADBEEF));
   tlb.tlbUpdate(0xFAADBDEA, &page_3);
-  EXPECT_EQ(tlb.tlbLookup(0xDEADBEEF), nullptr);
-  EXPECT_EQ(tlb.tlbLookup(0xFAADBDEA), &page_3);
+  EXPECT_EQ(tlb.tlbLookup(0xDEADBEEF), nullptr); // miss
+  EXPECT_EQ(tlb.tlbLookup(0xFAADBDEA), &page_3); // hit
 
   auto stats = tlb.getTLBStats();
-  EXPECT_EQ(stats.TLBHits, 4);
-  EXPECT_EQ(stats.TLBMisses, 2);
-  EXPECT_EQ(stats.TLBRequests, 6);
+  EXPECT_EQ(stats.TLBHits, 7);
+  EXPECT_EQ(stats.TLBMisses, 3);
+  EXPECT_EQ(stats.TLBRequests, 10);
 }
 
 #include "test_footer.hh"

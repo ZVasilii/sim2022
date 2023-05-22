@@ -63,14 +63,14 @@ void executeDIV(const Instruction &inst, State &state) {
 
 void executeLW(const Instruction &inst, State &state) {
   auto rs1 = state.regs.get(inst.rs1);
-  auto word = state.mem.loadWord(rs1 + inst.imm);
+  auto word = state.mem.loadEntity<Word>(rs1 + inst.imm);
   state.regs.set(inst.rd, word);
 }
 
 void executeSW(const Instruction &inst, State &state) {
   auto rs1 = state.regs.get(inst.rs1);
   auto rs2 = state.regs.get(inst.rs2);
-  state.mem.storeWord(rs1 + inst.imm, rs2);
+  state.mem.storeEntity<Word>(rs1 + inst.imm, rs2);
 }
 
 void executeJAL(const Instruction &inst, State &state) {
@@ -81,8 +81,8 @@ void executeJAL(const Instruction &inst, State &state) {
 
 void executeJALR(const Instruction &inst, State &state) {
   state.branchIsTaken = true;
-  state.regs.set(inst.rd, state.pc + kXLENInBytes);
   auto rs1 = state.regs.get(inst.rs1);
+  state.regs.set(inst.rd, state.pc + kXLENInBytes);
   state.npc = setBit<0, 0>(rs1 + inst.imm); // setting the least-significant
                                             // bit of the result to zero.
 }
